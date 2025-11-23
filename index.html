@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌌 픽셀 태양계</title>
+    <title>3D Solar System with Trails</title>
     <style>
         * {
             margin: 0;
@@ -12,28 +12,28 @@
         }
 
         body {
-            background: #0a0a1a;
+            background: #000;
             font-family: 'Courier New', monospace;
             overflow: hidden;
             color: #fff;
         }
 
-        #canvas {
-            display: block;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
         }
 
         #controls {
             position: fixed;
             top: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             border: 2px solid #444;
             padding: 15px;
-            border-radius: 0;
+            border-radius: 8px;
             z-index: 100;
             font-size: 12px;
+            min-width: 200px;
         }
 
         #controls h3 {
@@ -44,19 +44,19 @@
         }
 
         .control-row {
-            margin: 8px 0;
+            margin: 10px 0;
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
         .control-row label {
-            min-width: 60px;
+            min-width: 80px;
             color: #aaa;
         }
 
         input[type="range"] {
-            width: 100px;
+            width: 80px;
             cursor: pointer;
         }
 
@@ -64,11 +64,12 @@
             background: #333;
             color: #fff;
             border: 2px solid #666;
-            padding: 5px 10px;
+            padding: 6px 12px;
             cursor: pointer;
             font-family: 'Courier New', monospace;
             font-size: 11px;
-            transition: all 0.1s;
+            transition: all 0.2s;
+            border-radius: 4px;
         }
 
         button:hover {
@@ -80,6 +81,42 @@
             background: #222;
         }
 
+        button.active {
+            background: #ffcc00;
+            color: #000;
+            border-color: #ffcc00;
+        }
+
+        #instructions {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid #444;
+            padding: 15px;
+            font-size: 11px;
+            color: #888;
+            z-index: 100;
+            border-radius: 8px;
+        }
+
+        #instructions h4 {
+            color: #ffcc00;
+            margin-bottom: 8px;
+        }
+
+        #instructions p {
+            margin: 4px 0;
+        }
+
+        .key {
+            background: #333;
+            padding: 2px 6px;
+            border: 1px solid #555;
+            color: #fff;
+            border-radius: 3px;
+        }
+
         #info-panel {
             position: fixed;
             bottom: 20px;
@@ -87,16 +124,16 @@
             background: rgba(0, 0, 0, 0.9);
             border: 2px solid #ffcc00;
             padding: 15px;
-            min-width: 250px;
+            min-width: 280px;
             display: none;
             z-index: 100;
+            border-radius: 8px;
         }
 
         #info-panel h2 {
             color: #ffcc00;
             margin-bottom: 10px;
             font-size: 16px;
-            text-shadow: 2px 2px #000;
         }
 
         #info-panel p {
@@ -107,523 +144,620 @@
 
         #info-panel .planet-color {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
             margin-right: 8px;
             vertical-align: middle;
-        }
-
-        #instructions {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #444;
-            padding: 15px;
-            font-size: 11px;
-            color: #888;
-            z-index: 100;
-        }
-
-        #instructions h4 {
-            color: #ffcc00;
-            margin-bottom: 8px;
-        }
-
-        #instructions p {
-            margin: 3px 0;
-        }
-
-        .key {
-            background: #333;
-            padding: 2px 6px;
-            border: 1px solid #555;
-            color: #fff;
+            border-radius: 50%;
         }
 
         #fps {
             position: fixed;
             bottom: 20px;
             right: 20px;
-            color: #444;
+            color: #666;
             font-size: 10px;
+        }
+
+        .view-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .view-buttons button {
+            flex: 1;
+            min-width: 45%;
         }
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
+    <div id="canvas-container"></div>
 
     <div id="controls">
-        <h3>⚙️ 컨트롤</h3>
+        <h3>Control Panel</h3>
         <div class="control-row">
-            <label>속도:</label>
+            <label>Speed:</label>
             <input type="range" id="speed" min="0" max="5" step="0.1" value="1">
             <span id="speed-val">1x</span>
         </div>
         <div class="control-row">
-            <label>줌:</label>
-            <input type="range" id="zoom" min="0.3" max="3" step="0.1" value="1">
-            <span id="zoom-val">1x</span>
+            <label>Trail Length:</label>
+            <input type="range" id="trail-length" min="0" max="500" step="10" value="200">
+            <span id="trail-val">200</span>
         </div>
         <div class="control-row">
-            <button id="toggle-orbits">궤도 표시</button>
-            <button id="toggle-names">이름 표시</button>
+            <button id="toggle-trails" class="active">Trails ON</button>
+            <button id="toggle-orbits">Orbits ON</button>
         </div>
         <div class="control-row">
-            <button id="reset-view">뷰 리셋</button>
-            <button id="toggle-pause">일시정지</button>
+            <button id="toggle-names">Names ON</button>
+            <button id="toggle-pause">Pause</button>
+        </div>
+        <div class="control-row">
+            <label>View:</label>
+        </div>
+        <div class="view-buttons">
+            <button id="view-top">Top</button>
+            <button id="view-side">Side</button>
+            <button id="view-angle">Angle</button>
+            <button id="view-reset">Reset</button>
         </div>
     </div>
 
     <div id="instructions">
-        <h4>🎮 조작법</h4>
-        <p><span class="key">클릭</span> 행성 선택</p>
-        <p><span class="key">드래그</span> 화면 이동</p>
-        <p><span class="key">휠</span> 줌 인/아웃</p>
-        <p><span class="key">Space</span> 일시정지</p>
-        <p><span class="key">R</span> 뷰 리셋</p>
+        <h4>Controls</h4>
+        <p><span class="key">Left Drag</span> Rotate View</p>
+        <p><span class="key">Right Drag</span> Pan</p>
+        <p><span class="key">Scroll</span> Zoom In/Out</p>
+        <p><span class="key">Click</span> Select Planet</p>
+        <p><span class="key">Space</span> Pause/Play</p>
+        <p><span class="key">R</span> Reset View</p>
     </div>
 
     <div id="info-panel">
-        <h2 id="planet-name">행성</h2>
+        <h2 id="planet-name">Planet</h2>
         <p><span class="planet-color" id="planet-color-box"></span><span id="planet-type"></span></p>
         <p id="planet-desc"></p>
-        <p>🌡️ 평균 온도: <span id="planet-temp"></span></p>
-        <p>📏 지구 대비 크기: <span id="planet-size"></span></p>
-        <p>🔄 공전 주기: <span id="planet-orbit"></span></p>
-        <p>🌙 위성 수: <span id="planet-moons"></span></p>
+        <p>Temperature: <span id="planet-temp"></span></p>
+        <p>Size (vs Earth): <span id="planet-size"></span></p>
+        <p>Orbit Period: <span id="planet-orbit"></span></p>
+        <p>Moons: <span id="planet-moons"></span></p>
     </div>
 
     <div id="fps">FPS: <span id="fps-val">60</span></div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+        // Scene setup
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 
-        // Canvas 크기 설정
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-        }
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
 
-        // 상태 변수
+        // State variables
         let time = 0;
         let speedMultiplier = 1;
-        let zoomLevel = 1;
-        let offsetX = 0;
-        let offsetY = 0;
+        let showTrails = true;
         let showOrbits = true;
         let showNames = true;
         let isPaused = false;
+        let trailLength = 200;
         let selectedPlanet = null;
+
+        // Camera controls
         let isDragging = false;
-        let dragStartX = 0;
-        let dragStartY = 0;
+        let isPanning = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let cameraDistance = 800;
+        let cameraTheta = Math.PI / 4;  // Horizontal angle
+        let cameraPhi = Math.PI / 4;    // Vertical angle
+        let cameraTarget = new THREE.Vector3(0, 0, 0);
 
-        // 별 배경
-        const stars = [];
-        for (let i = 0; i < 300; i++) {
-            stars.push({
-                x: Math.random() * 2000 - 1000,
-                y: Math.random() * 2000 - 1000,
-                brightness: Math.random(),
-                twinkleSpeed: Math.random() * 0.05 + 0.01
-            });
-        }
-
-        // 행성 데이터
-        const planets = [
+        // Planet data
+        const planetsData = [
             {
-                name: '태양',
-                nameEn: 'Sun',
-                type: '항성',
-                color: '#ffcc00',
-                secondaryColor: '#ff8800',
-                size: 30,
+                name: 'Sun',
+                nameKo: '태양',
+                type: 'Star',
+                color: 0xffcc00,
+                emissive: 0xffaa00,
+                size: 40,
                 orbitRadius: 0,
                 orbitSpeed: 0,
                 angle: 0,
-                description: '태양계의 중심에 있는 항성',
-                temp: '5,500°C (표면)',
-                sizeRatio: '109배',
+                description: 'The star at the center of our solar system',
+                temp: '5,500°C (surface)',
+                sizeRatio: '109x',
                 orbitPeriod: '-',
-                moons: '-'
+                moons: '-',
+                isSun: true
             },
             {
-                name: '수성',
-                nameEn: 'Mercury',
-                type: '암석 행성',
-                color: '#8c8c8c',
-                secondaryColor: '#666666',
-                size: 4,
-                orbitRadius: 60,
+                name: 'Mercury',
+                nameKo: '수성',
+                type: 'Rocky Planet',
+                color: 0x8c8c8c,
+                size: 5,
+                orbitRadius: 70,
                 orbitSpeed: 0.04,
                 angle: Math.random() * Math.PI * 2,
-                description: '태양에서 가장 가까운 행성',
-                temp: '-180~430°C',
-                sizeRatio: '0.38배',
-                orbitPeriod: '88일',
-                moons: '0개'
+                description: 'The closest planet to the Sun',
+                temp: '-180 to 430°C',
+                sizeRatio: '0.38x',
+                orbitPeriod: '88 days',
+                moons: '0'
             },
             {
-                name: '금성',
-                nameEn: 'Venus',
-                type: '암석 행성',
-                color: '#e6c35c',
-                secondaryColor: '#cc9933',
-                size: 6,
-                orbitRadius: 90,
+                name: 'Venus',
+                nameKo: '금성',
+                type: 'Rocky Planet',
+                color: 0xe6c35c,
+                size: 8,
+                orbitRadius: 110,
                 orbitSpeed: 0.015,
                 angle: Math.random() * Math.PI * 2,
-                description: '지구와 비슷한 크기의 뜨거운 행성',
+                description: 'A hot planet similar in size to Earth',
                 temp: '462°C',
-                sizeRatio: '0.95배',
-                orbitPeriod: '225일',
-                moons: '0개'
+                sizeRatio: '0.95x',
+                orbitPeriod: '225 days',
+                moons: '0'
             },
             {
-                name: '지구',
-                nameEn: 'Earth',
-                type: '암석 행성',
-                color: '#4d94ff',
-                secondaryColor: '#2d6b2d',
-                size: 7,
-                orbitRadius: 130,
+                name: 'Earth',
+                nameKo: '지구',
+                type: 'Rocky Planet',
+                color: 0x4d94ff,
+                size: 9,
+                orbitRadius: 160,
                 orbitSpeed: 0.01,
                 angle: Math.random() * Math.PI * 2,
-                description: '우리가 사는 푸른 행성',
+                description: 'Our home, the blue planet',
                 temp: '15°C',
-                sizeRatio: '1배',
-                orbitPeriod: '365일',
-                moons: '1개'
+                sizeRatio: '1x',
+                orbitPeriod: '365 days',
+                moons: '1'
             },
             {
-                name: '화성',
-                nameEn: 'Mars',
-                type: '암석 행성',
-                color: '#cc4422',
-                secondaryColor: '#993311',
-                size: 5,
-                orbitRadius: 175,
+                name: 'Mars',
+                nameKo: '화성',
+                type: 'Rocky Planet',
+                color: 0xcc4422,
+                size: 6,
+                orbitRadius: 220,
                 orbitSpeed: 0.008,
                 angle: Math.random() * Math.PI * 2,
-                description: '붉은 사막의 행성',
+                description: 'The red desert planet',
                 temp: '-65°C',
-                sizeRatio: '0.53배',
-                orbitPeriod: '687일',
-                moons: '2개'
+                sizeRatio: '0.53x',
+                orbitPeriod: '687 days',
+                moons: '2'
             },
             {
-                name: '목성',
-                nameEn: 'Jupiter',
-                type: '가스 거대 행성',
-                color: '#d4a574',
-                secondaryColor: '#c49464',
-                size: 18,
-                orbitRadius: 250,
+                name: 'Jupiter',
+                nameKo: '목성',
+                type: 'Gas Giant',
+                color: 0xd4a574,
+                size: 25,
+                orbitRadius: 350,
                 orbitSpeed: 0.002,
                 angle: Math.random() * Math.PI * 2,
-                description: '태양계에서 가장 큰 행성',
+                description: 'The largest planet in our solar system',
                 temp: '-110°C',
-                sizeRatio: '11.2배',
-                orbitPeriod: '12년',
-                moons: '95개'
+                sizeRatio: '11.2x',
+                orbitPeriod: '12 years',
+                moons: '95'
             },
             {
-                name: '토성',
-                nameEn: 'Saturn',
-                type: '가스 거대 행성',
-                color: '#e6d4a8',
-                secondaryColor: '#c4b48a',
-                size: 15,
-                orbitRadius: 330,
+                name: 'Saturn',
+                nameKo: '토성',
+                type: 'Gas Giant',
+                color: 0xe6d4a8,
+                size: 22,
+                orbitRadius: 450,
                 orbitSpeed: 0.0009,
                 angle: Math.random() * Math.PI * 2,
                 hasRing: true,
-                description: '아름다운 고리를 가진 행성',
+                description: 'The ringed planet',
                 temp: '-140°C',
-                sizeRatio: '9.4배',
-                orbitPeriod: '29년',
-                moons: '146개'
+                sizeRatio: '9.4x',
+                orbitPeriod: '29 years',
+                moons: '146'
             },
             {
-                name: '천왕성',
-                nameEn: 'Uranus',
-                type: '얼음 거대 행성',
-                color: '#7de3e3',
-                secondaryColor: '#5dc3c3',
-                size: 10,
-                orbitRadius: 410,
+                name: 'Uranus',
+                nameKo: '천왕성',
+                type: 'Ice Giant',
+                color: 0x7de3e3,
+                size: 14,
+                orbitRadius: 550,
                 orbitSpeed: 0.0004,
                 angle: Math.random() * Math.PI * 2,
-                description: '옆으로 누워 자전하는 행성',
+                description: 'The tilted ice giant',
                 temp: '-195°C',
-                sizeRatio: '4배',
-                orbitPeriod: '84년',
-                moons: '28개'
+                sizeRatio: '4x',
+                orbitPeriod: '84 years',
+                moons: '28'
             },
             {
-                name: '해왕성',
-                nameEn: 'Neptune',
-                type: '얼음 거대 행성',
-                color: '#4169e1',
-                secondaryColor: '#3159d1',
-                size: 9,
-                orbitRadius: 480,
+                name: 'Neptune',
+                nameKo: '해왕성',
+                type: 'Ice Giant',
+                color: 0x4169e1,
+                size: 13,
+                orbitRadius: 650,
                 orbitSpeed: 0.0002,
                 angle: Math.random() * Math.PI * 2,
-                description: '강한 바람이 부는 푸른 행성',
+                description: 'The windiest planet',
                 temp: '-200°C',
-                sizeRatio: '3.9배',
-                orbitPeriod: '165년',
-                moons: '16개'
+                sizeRatio: '3.9x',
+                orbitPeriod: '165 years',
+                moons: '16'
             }
         ];
 
-        // 픽셀 원 그리기
-        function drawPixelCircle(x, y, radius, color) {
-            ctx.fillStyle = color;
-            const pixelSize = Math.max(2, Math.floor(radius / 4));
+        // 3D Objects storage
+        const planets = [];
+        const trails = [];
+        const orbitLines = [];
+        const nameLabels = [];
 
-            for (let py = -radius; py <= radius; py += pixelSize) {
-                for (let px = -radius; px <= radius; px += pixelSize) {
-                    if (px * px + py * py <= radius * radius) {
-                        ctx.fillRect(
-                            Math.floor(x + px),
-                            Math.floor(y + py),
-                            pixelSize,
-                            pixelSize
-                        );
-                    }
-                }
-            }
-        }
-
-        // 픽셀 원 (그라데이션 효과)
-        function drawPixelPlanet(x, y, radius, color, secondaryColor) {
-            const pixelSize = Math.max(2, Math.floor(radius / 4));
-
-            for (let py = -radius; py <= radius; py += pixelSize) {
-                for (let px = -radius; px <= radius; px += pixelSize) {
-                    if (px * px + py * py <= radius * radius) {
-                        // 간단한 3D 효과
-                        const dist = Math.sqrt(px * px + py * py) / radius;
-                        const lightFactor = 1 - dist * 0.5;
-
-                        // 좌상단이 밝게
-                        const highlight = (px < 0 && py < 0) ? 1.2 : 1;
-
-                        ctx.fillStyle = (px + py < 0) ? color : secondaryColor;
-                        ctx.globalAlpha = Math.min(1, lightFactor * highlight);
-                        ctx.fillRect(
-                            Math.floor(x + px),
-                            Math.floor(y + py),
-                            pixelSize,
-                            pixelSize
-                        );
-                    }
-                }
-            }
-            ctx.globalAlpha = 1;
-        }
-
-        // 토성 고리 그리기
-        function drawSaturnRing(x, y, planetRadius) {
-            ctx.strokeStyle = '#c4a86888';
-            ctx.lineWidth = 3;
-
-            const innerRadius = planetRadius * 1.4;
-            const outerRadius = planetRadius * 2.2;
-
-            // 픽셀화된 고리
-            ctx.fillStyle = '#c4a86866';
-            for (let angle = 0; angle < Math.PI * 2; angle += 0.1) {
-                for (let r = innerRadius; r < outerRadius; r += 3) {
-                    const px = x + Math.cos(angle) * r;
-                    const py = y + Math.sin(angle) * r * 0.3; // 기울어진 고리
-                    ctx.fillRect(Math.floor(px), Math.floor(py), 2, 2);
-                }
-            }
-        }
-
-        // 태양 글로우 효과
-        function drawSunGlow(x, y, radius) {
-            const glowLayers = 5;
-            for (let i = glowLayers; i >= 0; i--) {
-                const glowRadius = radius + i * 8;
-                const alpha = 0.1 - i * 0.015;
-                ctx.fillStyle = `rgba(255, 200, 0, ${alpha})`;
-                drawPixelCircle(x, y, glowRadius, ctx.fillStyle);
-            }
-        }
-
-        // 별 그리기
-        function drawStars() {
-            stars.forEach(star => {
-                const twinkle = Math.sin(time * star.twinkleSpeed) * 0.3 + 0.7;
-                const alpha = star.brightness * twinkle;
-                ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-
-                const sx = (star.x * zoomLevel) + canvas.width / 2 + offsetX;
-                const sy = (star.y * zoomLevel) + canvas.height / 2 + offsetY;
-
-                if (sx > -10 && sx < canvas.width + 10 && sy > -10 && sy < canvas.height + 10) {
-                    ctx.fillRect(Math.floor(sx), Math.floor(sy), 2, 2);
-                }
+        // Create starfield background
+        function createStarfield() {
+            const starsGeometry = new THREE.BufferGeometry();
+            const starsMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 1.5,
+                sizeAttenuation: true
             });
-        }
 
-        // 궤도 그리기
-        function drawOrbit(radius) {
-            const centerX = canvas.width / 2 + offsetX;
-            const centerY = canvas.height / 2 + offsetY;
-            const scaledRadius = radius * zoomLevel;
-
-            ctx.strokeStyle = '#ffffff15';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, scaledRadius, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        }
-
-        // 행성 위치 계산
-        function getPlanetPosition(planet) {
-            const centerX = canvas.width / 2 + offsetX;
-            const centerY = canvas.height / 2 + offsetY;
-
-            if (planet.orbitRadius === 0) {
-                return { x: centerX, y: centerY };
+            const starsVertices = [];
+            for (let i = 0; i < 5000; i++) {
+                const x = (Math.random() - 0.5) * 4000;
+                const y = (Math.random() - 0.5) * 4000;
+                const z = (Math.random() - 0.5) * 4000;
+                starsVertices.push(x, y, z);
             }
 
-            const x = centerX + Math.cos(planet.angle) * planet.orbitRadius * zoomLevel;
-            const y = centerY + Math.sin(planet.angle) * planet.orbitRadius * zoomLevel;
-
-            return { x, y };
+            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+            const starField = new THREE.Points(starsGeometry, starsMaterial);
+            scene.add(starField);
         }
 
-        // 클릭한 위치의 행성 찾기
-        function findPlanetAtPosition(mx, my) {
-            for (let i = planets.length - 1; i >= 0; i--) {
-                const planet = planets[i];
-                const pos = getPlanetPosition(planet);
-                const scaledSize = planet.size * zoomLevel;
-                const dist = Math.sqrt((mx - pos.x) ** 2 + (my - pos.y) ** 2);
+        // Create orbit line
+        function createOrbitLine(radius) {
+            const segments = 128;
+            const points = [];
 
-                if (dist <= scaledSize + 5) {
-                    return planet;
-                }
-            }
-            return null;
-        }
-
-        // 정보 패널 업데이트
-        function updateInfoPanel(planet) {
-            if (!planet) {
-                document.getElementById('info-panel').style.display = 'none';
-                return;
+            for (let i = 0; i <= segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                points.push(new THREE.Vector3(
+                    Math.cos(angle) * radius,
+                    0,
+                    Math.sin(angle) * radius
+                ));
             }
 
-            document.getElementById('info-panel').style.display = 'block';
-            document.getElementById('planet-name').textContent = `${planet.name} (${planet.nameEn})`;
-            document.getElementById('planet-type').textContent = planet.type;
-            document.getElementById('planet-color-box').style.backgroundColor = planet.color;
-            document.getElementById('planet-desc').textContent = planet.description;
-            document.getElementById('planet-temp').textContent = planet.temp;
-            document.getElementById('planet-size').textContent = planet.sizeRatio;
-            document.getElementById('planet-orbit').textContent = planet.orbitPeriod;
-            document.getElementById('planet-moons').textContent = planet.moons;
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const material = new THREE.LineBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.15
+            });
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+            orbitLines.push(line);
+            return line;
         }
 
-        // 메인 렌더링
-        function render() {
-            // 배경 클리어
-            ctx.fillStyle = '#0a0a1a';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Create planet
+        function createPlanet(data, index) {
+            const geometry = new THREE.SphereGeometry(data.size, 32, 32);
+            let material;
 
-            // 별 그리기
-            drawStars();
+            if (data.isSun) {
+                material = new THREE.MeshBasicMaterial({
+                    color: data.color,
+                    emissive: data.emissive
+                });
 
-            // 궤도 그리기
-            if (showOrbits) {
-                planets.forEach(planet => {
-                    if (planet.orbitRadius > 0) {
-                        drawOrbit(planet.orbitRadius);
-                    }
+                // Add glow effect for sun
+                const glowGeometry = new THREE.SphereGeometry(data.size * 1.3, 32, 32);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffaa00,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                scene.add(glow);
+
+                // Add point light from sun
+                const sunLight = new THREE.PointLight(0xffffee, 2, 2000);
+                scene.add(sunLight);
+            } else {
+                material = new THREE.MeshStandardMaterial({
+                    color: data.color,
+                    roughness: 0.8,
+                    metalness: 0.2
                 });
             }
 
-            // 태양 글로우
-            const sunPos = getPlanetPosition(planets[0]);
-            drawSunGlow(sunPos.x, sunPos.y, planets[0].size * zoomLevel);
+            const planet = new THREE.Mesh(geometry, material);
+            planet.userData = { ...data, index };
+            scene.add(planet);
 
-            // 행성 그리기
+            // Saturn's ring
+            if (data.hasRing) {
+                const ringGeometry = new THREE.RingGeometry(data.size * 1.4, data.size * 2.2, 64);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xc4a868,
+                    transparent: true,
+                    opacity: 0.6,
+                    side: THREE.DoubleSide
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = Math.PI / 2.5;
+                planet.add(ring);
+            }
+
+            // Create trail
+            const trailPositions = [];
+            for (let i = 0; i < trailLength; i++) {
+                trailPositions.push(0, 0, 0);
+            }
+            const trailGeometry = new THREE.BufferGeometry();
+            trailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(trailPositions, 3));
+
+            const trailMaterial = new THREE.LineBasicMaterial({
+                color: data.color,
+                transparent: true,
+                opacity: 0.7
+            });
+            const trail = new THREE.Line(trailGeometry, trailMaterial);
+            trail.userData = {
+                positions: [],
+                maxLength: trailLength,
+                color: data.color
+            };
+            scene.add(trail);
+            trails.push(trail);
+
+            planets.push(planet);
+
+            // Create orbit line
+            if (data.orbitRadius > 0) {
+                createOrbitLine(data.orbitRadius);
+            }
+
+            return planet;
+        }
+
+        // Create text sprite for names
+        function createTextSprite(text, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 64;
+
+            context.font = 'Bold 32px Courier New';
+            context.fillStyle = color;
+            context.textAlign = 'center';
+            context.fillText(text, 128, 40);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0.8
+            });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(50, 15, 1);
+            scene.add(sprite);
+            nameLabels.push(sprite);
+            return sprite;
+        }
+
+        // Initialize scene
+        function initScene() {
+            // Ambient light
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+
+            // Create starfield
+            createStarfield();
+
+            // Create planets
+            planetsData.forEach((data, index) => {
+                createPlanet(data, index);
+                if (data.orbitRadius > 0) {
+                    createTextSprite(data.name, '#' + data.color.toString(16).padStart(6, '0'));
+                }
+            });
+
+            // Initial camera position
+            updateCameraPosition();
+        }
+
+        // Update camera position based on spherical coordinates
+        function updateCameraPosition() {
+            camera.position.x = cameraTarget.x + cameraDistance * Math.sin(cameraPhi) * Math.cos(cameraTheta);
+            camera.position.y = cameraTarget.y + cameraDistance * Math.cos(cameraPhi);
+            camera.position.z = cameraTarget.z + cameraDistance * Math.sin(cameraPhi) * Math.sin(cameraTheta);
+            camera.lookAt(cameraTarget);
+        }
+
+        // Update planet positions
+        function updatePlanets() {
             planets.forEach((planet, index) => {
-                const pos = getPlanetPosition(planet);
-                const scaledSize = planet.size * zoomLevel;
+                const data = planetsData[index];
 
-                // 토성 고리 (행성 뒤쪽)
-                if (planet.hasRing) {
-                    drawSaturnRing(pos.x, pos.y, scaledSize);
+                if (!isPaused) {
+                    data.angle += data.orbitSpeed * speedMultiplier;
                 }
 
-                // 행성 본체
-                drawPixelPlanet(pos.x, pos.y, scaledSize, planet.color, planet.secondaryColor);
+                const x = Math.cos(data.angle) * data.orbitRadius;
+                const z = Math.sin(data.angle) * data.orbitRadius;
 
-                // 선택된 행성 하이라이트
-                if (selectedPlanet === planet) {
-                    ctx.strokeStyle = '#ffcc00';
-                    ctx.lineWidth = 2;
-                    ctx.setLineDash([3, 3]);
-                    ctx.beginPath();
-                    ctx.arc(pos.x, pos.y, scaledSize + 8, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
+                planet.position.set(x, 0, z);
+                planet.rotation.y += 0.01 * speedMultiplier;
+
+                // Update trail
+                if (data.orbitRadius > 0 && showTrails) {
+                    const trail = trails[index];
+                    const positions = trail.userData.positions;
+
+                    positions.unshift({ x, y: 0, z });
+                    if (positions.length > trail.userData.maxLength) {
+                        positions.pop();
+                    }
+
+                    const posArray = [];
+                    positions.forEach(pos => {
+                        posArray.push(pos.x, pos.y, pos.z);
+                    });
+
+                    trail.geometry.setAttribute('position',
+                        new THREE.Float32BufferAttribute(posArray, 3));
+                    trail.geometry.attributes.position.needsUpdate = true;
                 }
 
-                // 이름 표시
-                if (showNames && zoomLevel > 0.5) {
-                    ctx.fillStyle = '#ffffff88';
-                    ctx.font = `${Math.max(10, 12 * zoomLevel)}px 'Courier New'`;
-                    ctx.textAlign = 'center';
-                    ctx.fillText(planet.name, pos.x, pos.y + scaledSize + 15);
+                // Update name label position
+                if (nameLabels[index - 1]) {
+                    nameLabels[index - 1].position.set(x, data.size + 15, z);
+                    nameLabels[index - 1].visible = showNames;
                 }
             });
 
-            // 지구의 달
-            const earth = planets[3];
-            const earthPos = getPlanetPosition(earth);
-            const moonAngle = time * 0.05;
-            const moonDist = 15 * zoomLevel;
-            const moonX = earthPos.x + Math.cos(moonAngle) * moonDist;
-            const moonY = earthPos.y + Math.sin(moonAngle) * moonDist;
-            drawPixelCircle(moonX, moonY, 2 * zoomLevel, '#cccccc');
+            // Update orbit visibility
+            orbitLines.forEach(line => {
+                line.visible = showOrbits;
+            });
+
+            // Update trail visibility
+            trails.forEach(trail => {
+                trail.visible = showTrails;
+            });
         }
 
-        // 업데이트
-        function update() {
-            if (!isPaused) {
-                time += speedMultiplier;
+        // Handle window resize
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
 
-                planets.forEach(planet => {
-                    planet.angle += planet.orbitSpeed * speedMultiplier;
-                });
+        // Mouse events for camera rotation
+        function onMouseDown(event) {
+            if (event.button === 0) { // Left click
+                isDragging = true;
+            } else if (event.button === 2) { // Right click
+                isPanning = true;
+            }
+            previousMousePosition = { x: event.clientX, y: event.clientY };
+        }
+
+        function onMouseMove(event) {
+            if (isDragging) {
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+
+                cameraTheta -= deltaX * 0.01;
+                cameraPhi -= deltaY * 0.01;
+
+                // Clamp phi to prevent flipping
+                cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPhi));
+
+                updateCameraPosition();
+            } else if (isPanning) {
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+
+                const right = new THREE.Vector3();
+                const up = new THREE.Vector3(0, 1, 0);
+                camera.getWorldDirection(right);
+                right.cross(up).normalize();
+
+                cameraTarget.addScaledVector(right, -deltaX * 0.5);
+                cameraTarget.y += deltaY * 0.5;
+
+                updateCameraPosition();
+            }
+
+            previousMousePosition = { x: event.clientX, y: event.clientY };
+        }
+
+        function onMouseUp(event) {
+            // Check for planet click
+            if (!isDragging || (Math.abs(event.clientX - previousMousePosition.x) < 5 &&
+                Math.abs(event.clientY - previousMousePosition.y) < 5)) {
+                checkPlanetClick(event);
+            }
+            isDragging = false;
+            isPanning = false;
+        }
+
+        function onWheel(event) {
+            event.preventDefault();
+            cameraDistance += event.deltaY * 0.5;
+            cameraDistance = Math.max(100, Math.min(2000, cameraDistance));
+            updateCameraPosition();
+        }
+
+        // Raycaster for planet selection
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function checkPlanetClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(planets);
+
+            if (intersects.length > 0) {
+                const planet = intersects[0].object;
+                selectedPlanet = planet.userData;
+                updateInfoPanel(planet.userData);
+            } else {
+                selectedPlanet = null;
+                document.getElementById('info-panel').style.display = 'none';
             }
         }
 
-        // FPS 계산
+        // Update info panel
+        function updateInfoPanel(data) {
+            document.getElementById('info-panel').style.display = 'block';
+            document.getElementById('planet-name').textContent = `${data.name} (${data.nameKo})`;
+            document.getElementById('planet-type').textContent = data.type;
+            document.getElementById('planet-color-box').style.backgroundColor = '#' + data.color.toString(16).padStart(6, '0');
+            document.getElementById('planet-desc').textContent = data.description;
+            document.getElementById('planet-temp').textContent = data.temp;
+            document.getElementById('planet-size').textContent = data.sizeRatio;
+            document.getElementById('planet-orbit').textContent = data.orbitPeriod;
+            document.getElementById('planet-moons').textContent = data.moons;
+        }
+
+        // FPS counter
         let lastTime = performance.now();
         let frameCount = 0;
 
-        // 게임 루프
-        function gameLoop() {
-            update();
-            render();
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
 
-            // FPS 계산
+            if (!isPaused) {
+                time += speedMultiplier;
+            }
+
+            updatePlanets();
+            renderer.render(scene, camera);
+
+            // FPS calculation
             frameCount++;
             const currentTime = performance.now();
             if (currentTime - lastTime >= 1000) {
@@ -631,93 +765,101 @@
                 frameCount = 0;
                 lastTime = currentTime;
             }
-
-            requestAnimationFrame(gameLoop);
         }
 
-        // 이벤트 리스너
-        canvas.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            dragStartX = e.clientX - offsetX;
-            dragStartY = e.clientY - offsetY;
-        });
+        // Event listeners
+        window.addEventListener('resize', onWindowResize);
+        renderer.domElement.addEventListener('mousedown', onMouseDown);
+        renderer.domElement.addEventListener('mousemove', onMouseMove);
+        renderer.domElement.addEventListener('mouseup', onMouseUp);
+        renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+        renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        canvas.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                offsetX = e.clientX - dragStartX;
-                offsetY = e.clientY - dragStartY;
-            }
-        });
-
-        canvas.addEventListener('mouseup', (e) => {
-            if (!isDragging || (Math.abs(e.clientX - dragStartX - offsetX) < 5 && Math.abs(e.clientY - dragStartY - offsetY) < 5)) {
-                // 클릭으로 처리
-                const planet = findPlanetAtPosition(e.clientX, e.clientY);
-                selectedPlanet = planet;
-                updateInfoPanel(planet);
-            }
-            isDragging = false;
-        });
-
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? -0.1 : 0.1;
-            zoomLevel = Math.max(0.3, Math.min(3, zoomLevel + delta));
-            document.getElementById('zoom').value = zoomLevel;
-            document.getElementById('zoom-val').textContent = zoomLevel.toFixed(1) + 'x';
-        });
-
-        // 컨트롤 이벤트
+        // Control panel events
         document.getElementById('speed').addEventListener('input', (e) => {
             speedMultiplier = parseFloat(e.target.value);
             document.getElementById('speed-val').textContent = speedMultiplier.toFixed(1) + 'x';
         });
 
-        document.getElementById('zoom').addEventListener('input', (e) => {
-            zoomLevel = parseFloat(e.target.value);
-            document.getElementById('zoom-val').textContent = zoomLevel.toFixed(1) + 'x';
+        document.getElementById('trail-length').addEventListener('input', (e) => {
+            trailLength = parseInt(e.target.value);
+            document.getElementById('trail-val').textContent = trailLength;
+            trails.forEach(trail => {
+                trail.userData.maxLength = trailLength;
+            });
         });
 
-        document.getElementById('toggle-orbits').addEventListener('click', () => {
+        document.getElementById('toggle-trails').addEventListener('click', (e) => {
+            showTrails = !showTrails;
+            e.target.textContent = showTrails ? 'Trails ON' : 'Trails OFF';
+            e.target.classList.toggle('active', showTrails);
+        });
+
+        document.getElementById('toggle-orbits').addEventListener('click', (e) => {
             showOrbits = !showOrbits;
-            document.getElementById('toggle-orbits').textContent = showOrbits ? '궤도 숨기기' : '궤도 표시';
+            e.target.textContent = showOrbits ? 'Orbits ON' : 'Orbits OFF';
+            e.target.classList.toggle('active', showOrbits);
         });
 
-        document.getElementById('toggle-names').addEventListener('click', () => {
+        document.getElementById('toggle-names').addEventListener('click', (e) => {
             showNames = !showNames;
-            document.getElementById('toggle-names').textContent = showNames ? '이름 숨기기' : '이름 표시';
+            e.target.textContent = showNames ? 'Names ON' : 'Names OFF';
+            e.target.classList.toggle('active', showNames);
         });
 
-        document.getElementById('reset-view').addEventListener('click', () => {
-            zoomLevel = 1;
-            offsetX = 0;
-            offsetY = 0;
-            document.getElementById('zoom').value = 1;
-            document.getElementById('zoom-val').textContent = '1x';
-        });
-
-        document.getElementById('toggle-pause').addEventListener('click', () => {
+        document.getElementById('toggle-pause').addEventListener('click', (e) => {
             isPaused = !isPaused;
-            document.getElementById('toggle-pause').textContent = isPaused ? '재생' : '일시정지';
+            e.target.textContent = isPaused ? 'Play' : 'Pause';
+            e.target.classList.toggle('active', isPaused);
         });
 
-        // 키보드 이벤트
+        // View buttons
+        document.getElementById('view-top').addEventListener('click', () => {
+            cameraPhi = 0.1;
+            cameraTheta = 0;
+            updateCameraPosition();
+        });
+
+        document.getElementById('view-side').addEventListener('click', () => {
+            cameraPhi = Math.PI / 2;
+            cameraTheta = 0;
+            updateCameraPosition();
+        });
+
+        document.getElementById('view-angle').addEventListener('click', () => {
+            cameraPhi = Math.PI / 4;
+            cameraTheta = Math.PI / 4;
+            updateCameraPosition();
+        });
+
+        document.getElementById('view-reset').addEventListener('click', () => {
+            cameraDistance = 800;
+            cameraPhi = Math.PI / 4;
+            cameraTheta = Math.PI / 4;
+            cameraTarget.set(0, 0, 0);
+            updateCameraPosition();
+        });
+
+        // Keyboard events
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
                 isPaused = !isPaused;
-                document.getElementById('toggle-pause').textContent = isPaused ? '재생' : '일시정지';
+                const btn = document.getElementById('toggle-pause');
+                btn.textContent = isPaused ? 'Play' : 'Pause';
+                btn.classList.toggle('active', isPaused);
             } else if (e.code === 'KeyR') {
-                zoomLevel = 1;
-                offsetX = 0;
-                offsetY = 0;
-                document.getElementById('zoom').value = 1;
-                document.getElementById('zoom-val').textContent = '1x';
+                cameraDistance = 800;
+                cameraPhi = Math.PI / 4;
+                cameraTheta = Math.PI / 4;
+                cameraTarget.set(0, 0, 0);
+                updateCameraPosition();
             }
         });
 
-        // 시작
-        gameLoop();
+        // Initialize and start
+        initScene();
+        animate();
     </script>
 </body>
 </html>
