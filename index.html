@@ -227,6 +227,7 @@
 
     <div id="view-mode">
         <button id="view-top" class="view-btn">위에서</button>
+        <button id="view-bottom" class="view-btn">아래에서</button>
         <button id="view-side" class="view-btn">옆에서</button>
         <button id="view-front" class="view-btn">앞에서</button>
         <button id="view-free" class="view-btn active">자유 시점</button>
@@ -256,6 +257,10 @@
             <button id="toggle-realistic">실제 비율</button>
             <button id="auto-rotate">자동 회전</button>
         </div>
+        <div class="control-row">
+            <button id="toggle-axis" class="active">축 숨기기</button>
+            <button id="toggle-grid" class="active">그리드 숨기기</button>
+        </div>
     </div>
 
     <div id="instructions">
@@ -266,7 +271,9 @@
         <p><span class="key">클릭</span> 행성 선택</p>
         <p><span class="key">Space</span> 일시정지</p>
         <p><span class="key">R</span> 뷰 리셋</p>
-        <p><span class="key">1-4</span> 시점 변경</p>
+        <p><span class="key">1-5</span> 시점 변경</p>
+        <p><span class="key">A</span> 축 표시/숨기기</p>
+        <p><span class="key">G</span> 그리드 표시/숨기기</p>
     </div>
 
     <div id="info-panel">
@@ -292,9 +299,11 @@
         let orbits = [];
         let labels = [];
         let starField;
+        let axisHelper, gridHelper;
         let raycaster, mouse;
         let selectedPlanet = null;
         let clock = new THREE.Clock();
+        let showAxis = true;
 
         // 상태 변수
         let time = 0;
@@ -493,14 +502,25 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // OrbitControls - 자유로운 시점 조절
+            // OrbitControls - 완전히 자유로운 시점 조절
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.screenSpacePanning = false;
-            controls.minDistance = 50;
-            controls.maxDistance = 1000;
+            controls.screenSpacePanning = true;
+            controls.minDistance = 30;
+            controls.maxDistance = 1500;
+            // 완전한 Y축 회전 허용 (위/아래 어디서든 볼 수 있음)
+            controls.minPolarAngle = 0;
             controls.maxPolarAngle = Math.PI;
+            // 무제한 수평 회전
+            controls.minAzimuthAngle = -Infinity;
+            controls.maxAzimuthAngle = Infinity;
+            controls.enablePan = true;
+            controls.enableZoom = true;
+            controls.enableRotate = true;
+            controls.rotateSpeed = 0.8;
+            controls.zoomSpeed = 1.2;
+            controls.panSpeed = 0.8;
 
             // Raycaster for click detection
             raycaster = new THREE.Raycaster();
@@ -517,6 +537,9 @@
 
             // Create orbit lines
             createOrbits();
+
+            // Create 3D axis helper
+            createAxisHelper();
 
             // Event listeners
             setupEventListeners();
@@ -737,6 +760,111 @@
             });
         }
 
+        function createAxisHelper() {
+            // 3D 축 표시 (X: 빨강, Y: 초록, Z: 파랑)
+            axisHelper = new THREE.Group();
+
+            const axisLength = 350;
+            const axisColors = {
+                x: 0xff4444,  // 빨강
+                y: 0x44ff44,  // 초록
+                z: 0x4444ff   // 파랑
+            };
+
+            // X축 (빨강)
+            const xAxisGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-axisLength, 0, 0),
+                new THREE.Vector3(axisLength, 0, 0)
+            ]);
+            const xAxisMaterial = new THREE.LineBasicMaterial({ color: axisColors.x, transparent: true, opacity: 0.6 });
+            const xAxis = new THREE.Line(xAxisGeometry, xAxisMaterial);
+            axisHelper.add(xAxis);
+
+            // Y축 (초록)
+            const yAxisGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, -axisLength, 0),
+                new THREE.Vector3(0, axisLength, 0)
+            ]);
+            const yAxisMaterial = new THREE.LineBasicMaterial({ color: axisColors.y, transparent: true, opacity: 0.6 });
+            const yAxis = new THREE.Line(yAxisGeometry, yAxisMaterial);
+            axisHelper.add(yAxis);
+
+            // Z축 (파랑)
+            const zAxisGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, -axisLength),
+                new THREE.Vector3(0, 0, axisLength)
+            ]);
+            const zAxisMaterial = new THREE.LineBasicMaterial({ color: axisColors.z, transparent: true, opacity: 0.6 });
+            const zAxis = new THREE.Line(zAxisGeometry, zAxisMaterial);
+            axisHelper.add(zAxis);
+
+            // 축 끝 화살표 표시
+            const arrowSize = 8;
+
+            // X축 화살표
+            const xArrowGeometry = new THREE.ConeGeometry(arrowSize / 2, arrowSize, 8);
+            const xArrowMaterial = new THREE.MeshBasicMaterial({ color: axisColors.x });
+            const xArrow = new THREE.Mesh(xArrowGeometry, xArrowMaterial);
+            xArrow.position.set(axisLength, 0, 0);
+            xArrow.rotation.z = -Math.PI / 2;
+            axisHelper.add(xArrow);
+
+            // Y축 화살표
+            const yArrowGeometry = new THREE.ConeGeometry(arrowSize / 2, arrowSize, 8);
+            const yArrowMaterial = new THREE.MeshBasicMaterial({ color: axisColors.y });
+            const yArrow = new THREE.Mesh(yArrowGeometry, yArrowMaterial);
+            yArrow.position.set(0, axisLength, 0);
+            axisHelper.add(yArrow);
+
+            // Z축 화살표
+            const zArrowGeometry = new THREE.ConeGeometry(arrowSize / 2, arrowSize, 8);
+            const zArrowMaterial = new THREE.MeshBasicMaterial({ color: axisColors.z });
+            const zArrow = new THREE.Mesh(zArrowGeometry, zArrowMaterial);
+            zArrow.position.set(0, 0, axisLength);
+            zArrow.rotation.x = Math.PI / 2;
+            axisHelper.add(zArrow);
+
+            // 축 레이블 추가
+            createAxisLabel('X', axisLength + 15, 0, 0, axisColors.x);
+            createAxisLabel('Y', 0, axisLength + 15, 0, axisColors.y);
+            createAxisLabel('Z', 0, 0, axisLength + 15, axisColors.z);
+
+            // 그리드 (XZ 평면)
+            gridHelper = new THREE.GridHelper(600, 30, 0x444466, 0x222233);
+            gridHelper.material.transparent = true;
+            gridHelper.material.opacity = 0.3;
+            scene.add(gridHelper);
+
+            scene.add(axisHelper);
+        }
+
+        function createAxisLabel(text, x, y, z, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 64;
+            canvas.height = 64;
+
+            context.fillStyle = 'rgba(0, 0, 0, 0)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            context.font = 'Bold 48px Courier New';
+            context.fillStyle = '#' + color.toString(16).padStart(6, '0');
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, 32, 32);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({
+                map: texture,
+                transparent: true,
+                depthTest: false
+            });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.position.set(x, y, z);
+            sprite.scale.set(15, 15, 1);
+            axisHelper.add(sprite);
+        }
+
         function updatePlanets(delta) {
             if (isPaused) return;
 
@@ -831,9 +959,25 @@
 
             // View mode buttons
             document.getElementById('view-top').addEventListener('click', () => setView('top'));
+            document.getElementById('view-bottom').addEventListener('click', () => setView('bottom'));
             document.getElementById('view-side').addEventListener('click', () => setView('side'));
             document.getElementById('view-front').addEventListener('click', () => setView('front'));
             document.getElementById('view-free').addEventListener('click', () => setView('free'));
+
+            // Axis and Grid toggle
+            document.getElementById('toggle-axis').addEventListener('click', () => {
+                showAxis = !showAxis;
+                axisHelper.visible = showAxis;
+                document.getElementById('toggle-axis').textContent = showAxis ? '축 숨기기' : '축 표시';
+                document.getElementById('toggle-axis').classList.toggle('active', showAxis);
+            });
+
+            document.getElementById('toggle-grid').addEventListener('click', () => {
+                const isVisible = gridHelper.visible;
+                gridHelper.visible = !isVisible;
+                document.getElementById('toggle-grid').textContent = !isVisible ? '그리드 숨기기' : '그리드 표시';
+                document.getElementById('toggle-grid').classList.toggle('active', !isVisible);
+            });
         }
 
         function onWindowResize() {
@@ -914,13 +1058,29 @@
                     setView('top');
                     break;
                 case 'Digit2':
-                    setView('side');
+                    setView('bottom');
                     break;
                 case 'Digit3':
-                    setView('front');
+                    setView('side');
                     break;
                 case 'Digit4':
+                    setView('front');
+                    break;
+                case 'Digit5':
                     setView('free');
+                    break;
+                case 'KeyA':
+                    // 축 토글
+                    showAxis = !showAxis;
+                    axisHelper.visible = showAxis;
+                    document.getElementById('toggle-axis').textContent = showAxis ? '축 숨기기' : '축 표시';
+                    document.getElementById('toggle-axis').classList.toggle('active', showAxis);
+                    break;
+                case 'KeyG':
+                    // 그리드 토글
+                    gridHelper.visible = !gridHelper.visible;
+                    document.getElementById('toggle-grid').textContent = gridHelper.visible ? '그리드 숨기기' : '그리드 표시';
+                    document.getElementById('toggle-grid').classList.toggle('active', gridHelper.visible);
                     break;
             }
         }
@@ -931,8 +1091,12 @@
 
             switch (viewType) {
                 case 'top':
-                    animateCamera(0, 400, 0);
+                    animateCamera(0, 400, 1);
                     document.getElementById('view-top').classList.add('active');
+                    break;
+                case 'bottom':
+                    animateCamera(0, -400, 1);
+                    document.getElementById('view-bottom').classList.add('active');
                     break;
                 case 'side':
                     animateCamera(400, 50, 0);
