@@ -3,863 +3,616 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Solar System with Trails</title>
+    <title>숲의 수호자 전투 데모</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+KR:wght@400;700&display=swap');
+
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
 
         body {
-            background: #000;
-            font-family: 'Courier New', monospace;
-            overflow: hidden;
-            color: #fff;
-        }
-
-        #canvas-container {
-            width: 100vw;
+            background: #0f0c1a;
+            color: #fefefe;
+            font-family: 'Noto Sans KR', sans-serif;
             height: 100vh;
+            overflow: hidden;
         }
 
-        #controls {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.85);
-            border: 2px solid #444;
-            padding: 15px;
-            border-radius: 8px;
-            z-index: 100;
-            font-size: 12px;
-            min-width: 200px;
+        header {
+            padding: 14px 20px;
+            background: linear-gradient(90deg, rgba(73, 40, 110, 0.8), rgba(21, 92, 63, 0.8));
+            border-bottom: 3px solid #39214f;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
         }
 
-        #controls h3 {
-            color: #ffcc00;
-            margin-bottom: 10px;
+        header h1 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 18px;
+            letter-spacing: 1px;
+        }
+
+        header p {
+            margin-top: 8px;
+            color: #c8ffd7;
             font-size: 14px;
-            text-shadow: 2px 2px #000;
         }
 
-        .control-row {
-            margin: 10px 0;
+        main {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            height: calc(100vh - 96px);
+        }
+
+        #scene {
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(circle at 30% 20%, rgba(255, 223, 150, 0.08), transparent 40%),
+                        linear-gradient(180deg, #123022 0%, #0d1b14 100%);
+        }
+
+        .parallax {
+            position: absolute;
+            inset: 0;
+            background-repeat: repeat-x;
+            background-size: cover;
+            animation: sway 12s ease-in-out infinite;
+            opacity: 0.6;
+        }
+
+        .parallax.far {
+            background-image: linear-gradient(rgba(14, 39, 32, 0.7), rgba(9, 21, 17, 0.7)),
+                url('https://cdn.jsdelivr.net/gh/edent/SuperTinyIcons/images/svg/tree.svg');
+            filter: blur(1px);
+        }
+
+        .parallax.near {
+            background-image: linear-gradient(rgba(24, 83, 52, 0.55), rgba(10, 26, 20, 0.75)),
+                url('https://cdn.jsdelivr.net/gh/edent/SuperTinyIcons/images/svg/tree.svg');
+            animation-duration: 16s;
+            opacity: 0.75;
+        }
+
+        #ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 180px;
+            background: linear-gradient(180deg, rgba(31, 86, 55, 0.6), rgba(19, 40, 28, 0.9));
+            box-shadow: inset 0 16px 40px rgba(0, 0, 0, 0.6);
+            border-top: 3px solid rgba(154, 192, 78, 0.2);
+        }
+
+        .sprite {
+            position: absolute;
+            bottom: 130px;
+            width: 160px;
+            height: 180px;
+            image-rendering: pixelated;
+            transition: transform 0.35s ease, filter 0.35s ease;
+        }
+
+        #hero {
+            left: 18%;
+        }
+
+        #boss {
+            right: 12%;
+        }
+
+        .knight {
+            background:
+                linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%),
+                radial-gradient(circle at 30% 30%, #f0f0f0, #c8c8c8 60%),
+                linear-gradient(180deg, #6673b5 0%, #2a305b 90%);
+            border: 3px solid #1c1f36;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.55), 0 0 0 6px rgba(86, 142, 224, 0.25);
+            clip-path: polygon(50% 0%, 80% 22%, 86% 55%, 74% 82%, 26% 82%, 14% 55%, 20% 22%);
+        }
+
+        .knight::after {
+            content: '';
+            position: absolute;
+            bottom: -32px;
+            left: 50%;
+            width: 14px;
+            height: 68px;
+            background: linear-gradient(180deg, #e0e0e0 0%, #7a8cc0 90%);
+            transform: translateX(-50%);
+            box-shadow: 0 -10px 0 6px rgba(255, 255, 255, 0.08);
+        }
+
+        .tree-guardian {
+            background:
+                radial-gradient(circle at 30% 40%, #80552e 0%, #5b3a1f 68%),
+                linear-gradient(180deg, #6b4226 0%, #3a2312 90%);
+            border: 3px solid #1f1209;
+            box-shadow: 0 12px 38px rgba(0, 0, 0, 0.6), 0 0 0 10px rgba(94, 64, 27, 0.25);
+            clip-path: polygon(50% 0%, 86% 24%, 94% 60%, 75% 100%, 25% 100%, 6% 60%, 14% 24%);
+        }
+
+        .tree-guardian::before, .tree-guardian::after {
+            content: '';
+            position: absolute;
+            width: 60px;
+            height: 24px;
+            background: radial-gradient(circle at 50% 50%, #d8f19d, #6d8f35 70%);
+            top: 20px;
+            border-radius: 18px;
+            box-shadow: 0 0 12px rgba(130, 190, 66, 0.45);
+        }
+
+        .tree-guardian::before { left: -16px; transform: rotate(-12deg); }
+        .tree-guardian::after { right: -16px; transform: rotate(12deg); }
+
+        .shadow {
+            position: absolute;
+            width: 180px;
+            height: 32px;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.35) 0%, transparent 70%);
+            bottom: 104px;
+            filter: blur(6px);
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+        }
+
+        #hud {
+            background: rgba(8, 13, 12, 0.85);
+            border-left: 3px solid #2e6a46;
+            padding: 20px;
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 16px;
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.6);
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.04);
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+        }
+
+        .label {
             display: flex;
             align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            letter-spacing: 0.4px;
+        }
+
+        .chip {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .chip.hero { background: rgba(104, 152, 255, 0.14); color: #9bc8ff; }
+        .chip.boss { background: rgba(255, 102, 71, 0.14); color: #ffad94; }
+
+        .bar {
+            position: relative;
+            width: 100%;
+            height: 18px;
+            background: rgba(255, 255, 255, 0.08);
+            margin-top: 6px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar-inner {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #7cffc4, #4fa6ff);
+            transition: width 0.35s ease;
+        }
+
+        .bar-inner.boss {
+            background: linear-gradient(90deg, #ff855f, #ff4f4f);
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 10px;
         }
 
-        .control-row label {
-            min-width: 80px;
-            color: #aaa;
-        }
-
-        input[type="range"] {
-            width: 80px;
+        button.action {
+            background: linear-gradient(180deg, #1f2d2a, #0e1715);
+            color: #f0f9f6;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 14px 10px;
+            border-radius: 10px;
+            text-align: left;
             cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.2s ease;
+            position: relative;
+            overflow: hidden;
         }
 
-        button {
-            background: #333;
-            color: #fff;
-            border: 2px solid #666;
-            padding: 6px 12px;
-            cursor: pointer;
-            font-family: 'Courier New', monospace;
+        button.action:hover {
+            transform: translateY(-3px);
+            border-color: #5ce1b9;
+            box-shadow: 0 12px 22px rgba(0, 0, 0, 0.35);
+        }
+
+        button.action:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+            border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        button .name {
+            font-weight: 700;
+            display: block;
+        }
+
+        button .desc {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #cde7dc;
+            line-height: 1.3;
+        }
+
+        button .key-hint {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.18);
             font-size: 11px;
-            transition: all 0.2s;
-            border-radius: 4px;
+            padding: 3px 6px;
+            border-radius: 6px;
         }
 
-        button:hover {
-            background: #555;
-            border-color: #888;
+        #log {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);
         }
 
-        button:active {
-            background: #222;
+        #log p {
+            margin-bottom: 6px;
         }
 
-        button.active {
-            background: #ffcc00;
-            color: #000;
-            border-color: #ffcc00;
-        }
+        #log .hero { color: #88c7ff; }
+        #log .boss { color: #ff9b7a; }
+        #log .system { color: #d7f5c9; }
 
-        #instructions {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.85);
-            border: 2px solid #444;
-            padding: 15px;
-            font-size: 11px;
-            color: #888;
-            z-index: 100;
-            border-radius: 8px;
-        }
-
-        #instructions h4 {
-            color: #ffcc00;
-            margin-bottom: 8px;
-        }
-
-        #instructions p {
-            margin: 4px 0;
-        }
-
-        .key {
-            background: #333;
-            padding: 2px 6px;
-            border: 1px solid #555;
-            color: #fff;
-            border-radius: 3px;
-        }
-
-        #info-panel {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.9);
-            border: 2px solid #ffcc00;
-            padding: 15px;
-            min-width: 280px;
-            display: none;
-            z-index: 100;
-            border-radius: 8px;
-        }
-
-        #info-panel h2 {
-            color: #ffcc00;
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-
-        #info-panel p {
-            margin: 5px 0;
-            font-size: 11px;
-            color: #ccc;
-        }
-
-        #info-panel .planet-color {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            margin-right: 8px;
-            vertical-align: middle;
-            border-radius: 50%;
-        }
-
-        #fps {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            color: #666;
-            font-size: 10px;
-        }
-
-        .view-buttons {
+        #footer {
+            padding: 14px 20px;
+            background: rgba(12, 18, 16, 0.85);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 13px;
+            color: #b7d6c3;
             display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 5px;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .view-buttons button {
-            flex: 1;
-            min-width: 45%;
+        .attack { transform: translateX(24px) scale(1.04); }
+        .hurt { filter: brightness(0.6) saturate(0.8); }
+
+        @keyframes sway {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+            100% { transform: translateX(0); }
+        }
+
+        @media (max-width: 960px) {
+            main { grid-template-columns: 1fr; height: auto; }
+            #scene { height: 420px; }
+            #hud { border-left: none; border-top: 3px solid #2e6a46; }
         }
     </style>
 </head>
 <body>
-    <div id="canvas-container"></div>
+    <header>
+        <h1>FOREST GUARDIAN ENCOUNTER</h1>
+        <p>기사의 길을 걷거나, 숲의 수호자가 되어 자연을 지킬 길을 선택하세요.</p>
+    </header>
 
-    <div id="controls">
-        <h3>Control Panel</h3>
-        <div class="control-row">
-            <label>Speed:</label>
-            <input type="range" id="speed" min="0" max="5" step="0.1" value="1">
-            <span id="speed-val">1x</span>
-        </div>
-        <div class="control-row">
-            <label>Trail Length:</label>
-            <input type="range" id="trail-length" min="0" max="500" step="10" value="200">
-            <span id="trail-val">200</span>
-        </div>
-        <div class="control-row">
-            <button id="toggle-trails" class="active">Trails ON</button>
-            <button id="toggle-orbits">Orbits ON</button>
-        </div>
-        <div class="control-row">
-            <button id="toggle-names">Names ON</button>
-            <button id="toggle-pause">Pause</button>
-        </div>
-        <div class="control-row">
-            <label>View:</label>
-        </div>
-        <div class="view-buttons">
-            <button id="view-top">Top</button>
-            <button id="view-side">Side</button>
-            <button id="view-angle">Angle</button>
-            <button id="view-reset">Reset</button>
-        </div>
+    <main>
+        <section id="scene">
+            <div class="parallax far"></div>
+            <div class="parallax near"></div>
+            <div id="hero" class="sprite knight"></div>
+            <div id="boss" class="sprite tree-guardian"></div>
+            <div class="shadow"></div>
+            <div id="ground"></div>
+        </section>
+
+        <aside id="hud">
+            <div class="stat" id="hero-stat">
+                <div class="label">
+                    <span class="chip hero">기사</span>
+                    <span>실버 블레이드</span>
+                </div>
+                <div class="bar"><div id="hero-hp" class="bar-inner"></div></div>
+                <div id="hero-status" style="margin-top:6px; color:#9bc8ff; font-size:13px;">준비 완료</div>
+            </div>
+
+            <div class="stat" id="boss-stat">
+                <div class="label">
+                    <span class="chip boss">보스</span>
+                    <span>숲의 거목</span>
+                </div>
+                <div class="bar"><div id="boss-hp" class="bar-inner boss"></div></div>
+                <div id="boss-status" style="margin-top:6px; color:#ffb899; font-size:13px;">고요한 분노</div>
+            </div>
+
+            <div class="actions">
+                <button class="action" id="slash-btn">
+                    <span class="name">1. 일섬 베기</span>
+                    <span class="desc">빠르게 접근해 12~18 피해를 줍니다.</span>
+                    <span class="key-hint">Q</span>
+                </button>
+                <button class="action" id="guard-btn">
+                    <span class="name">2. 방패 올리기</span>
+                    <span class="desc">다음 피해를 60% 감소시키고 반격(6)합니다.</span>
+                    <span class="key-hint">W</span>
+                </button>
+                <button class="action" id="fire-btn">
+                    <span class="name">3. 불꽃병 투척</span>
+                    <span class="desc">24~30 피해와 2턴 연소(턴당 5) 부여.</span>
+                    <span class="key-hint">E</span>
+                </button>
+                <button class="action" id="heal-btn">
+                    <span class="name">4. 재정비</span>
+                    <span class="desc">체력 14~20 회복. 2회 사용 가능.</span>
+                    <span class="key-hint">R</span>
+                </button>
+            </div>
+
+            <div id="log"></div>
+        </aside>
+    </main>
+
+    <div id="footer">
+        <div>키보드 단축키: Q/W/E/R &bull; 턴 마다 숲의 거목이 반격합니다.</div>
+        <div id="turn-indicator">기사의 턴</div>
     </div>
 
-    <div id="instructions">
-        <h4>Controls</h4>
-        <p><span class="key">Left Drag</span> Rotate View</p>
-        <p><span class="key">Right Drag</span> Pan</p>
-        <p><span class="key">Scroll</span> Zoom In/Out</p>
-        <p><span class="key">Click</span> Select Planet</p>
-        <p><span class="key">Space</span> Pause/Play</p>
-        <p><span class="key">R</span> Reset View</p>
-    </div>
-
-    <div id="info-panel">
-        <h2 id="planet-name">Planet</h2>
-        <p><span class="planet-color" id="planet-color-box"></span><span id="planet-type"></span></p>
-        <p id="planet-desc"></p>
-        <p>Temperature: <span id="planet-temp"></span></p>
-        <p>Size (vs Earth): <span id="planet-size"></span></p>
-        <p>Orbit Period: <span id="planet-orbit"></span></p>
-        <p>Moons: <span id="planet-moons"></span></p>
-    </div>
-
-    <div id="fps">FPS: <span id="fps-val">60</span></div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // Scene setup
-        const container = document.getElementById('canvas-container');
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const hero = {
+            name: '실버 블레이드',
+            maxHp: 120,
+            hp: 120,
+            shield: false,
+            healCharges: 2,
+            burning: 0,
+        };
 
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        container.appendChild(renderer.domElement);
+        const boss = {
+            name: '숲의 거목',
+            maxHp: 180,
+            hp: 180,
+            enraged: false,
+            sapArmor: 0,
+            burning: 0,
+        };
 
-        // State variables
-        let time = 0;
-        let speedMultiplier = 1;
-        let showTrails = true;
-        let showOrbits = true;
-        let showNames = true;
-        let isPaused = false;
-        let trailLength = 200;
-        let selectedPlanet = null;
+        let actionLock = false;
 
-        // Camera controls
-        let isDragging = false;
-        let isPanning = false;
-        let previousMousePosition = { x: 0, y: 0 };
-        let cameraDistance = 800;
-        let cameraTheta = Math.PI / 4;  // Horizontal angle
-        let cameraPhi = Math.PI / 4;    // Vertical angle
-        let cameraTarget = new THREE.Vector3(0, 0, 0);
+        const heroHpEl = document.getElementById('hero-hp');
+        const bossHpEl = document.getElementById('boss-hp');
+        const heroStatus = document.getElementById('hero-status');
+        const bossStatus = document.getElementById('boss-status');
+        const heroSprite = document.getElementById('hero');
+        const bossSprite = document.getElementById('boss');
+        const logBox = document.getElementById('log');
+        const turnIndicator = document.getElementById('turn-indicator');
 
-        // Planet data
-        const planetsData = [
-            {
-                name: 'Sun',
-                nameKo: '태양',
-                type: 'Star',
-                color: 0xffcc00,
-                emissive: 0xffaa00,
-                size: 40,
-                orbitRadius: 0,
-                orbitSpeed: 0,
-                angle: 0,
-                description: 'The star at the center of our solar system',
-                temp: '5,500°C (surface)',
-                sizeRatio: '109x',
-                orbitPeriod: '-',
-                moons: '-',
-                isSun: true
-            },
-            {
-                name: 'Mercury',
-                nameKo: '수성',
-                type: 'Rocky Planet',
-                color: 0x8c8c8c,
-                size: 5,
-                orbitRadius: 70,
-                orbitSpeed: 0.04,
-                angle: Math.random() * Math.PI * 2,
-                description: 'The closest planet to the Sun',
-                temp: '-180 to 430°C',
-                sizeRatio: '0.38x',
-                orbitPeriod: '88 days',
-                moons: '0'
-            },
-            {
-                name: 'Venus',
-                nameKo: '금성',
-                type: 'Rocky Planet',
-                color: 0xe6c35c,
-                size: 8,
-                orbitRadius: 110,
-                orbitSpeed: 0.015,
-                angle: Math.random() * Math.PI * 2,
-                description: 'A hot planet similar in size to Earth',
-                temp: '462°C',
-                sizeRatio: '0.95x',
-                orbitPeriod: '225 days',
-                moons: '0'
-            },
-            {
-                name: 'Earth',
-                nameKo: '지구',
-                type: 'Rocky Planet',
-                color: 0x4d94ff,
-                size: 9,
-                orbitRadius: 160,
-                orbitSpeed: 0.01,
-                angle: Math.random() * Math.PI * 2,
-                description: 'Our home, the blue planet',
-                temp: '15°C',
-                sizeRatio: '1x',
-                orbitPeriod: '365 days',
-                moons: '1'
-            },
-            {
-                name: 'Mars',
-                nameKo: '화성',
-                type: 'Rocky Planet',
-                color: 0xcc4422,
-                size: 6,
-                orbitRadius: 220,
-                orbitSpeed: 0.008,
-                angle: Math.random() * Math.PI * 2,
-                description: 'The red desert planet',
-                temp: '-65°C',
-                sizeRatio: '0.53x',
-                orbitPeriod: '687 days',
-                moons: '2'
-            },
-            {
-                name: 'Jupiter',
-                nameKo: '목성',
-                type: 'Gas Giant',
-                color: 0xd4a574,
-                size: 25,
-                orbitRadius: 350,
-                orbitSpeed: 0.002,
-                angle: Math.random() * Math.PI * 2,
-                description: 'The largest planet in our solar system',
-                temp: '-110°C',
-                sizeRatio: '11.2x',
-                orbitPeriod: '12 years',
-                moons: '95'
-            },
-            {
-                name: 'Saturn',
-                nameKo: '토성',
-                type: 'Gas Giant',
-                color: 0xe6d4a8,
-                size: 22,
-                orbitRadius: 450,
-                orbitSpeed: 0.0009,
-                angle: Math.random() * Math.PI * 2,
-                hasRing: true,
-                description: 'The ringed planet',
-                temp: '-140°C',
-                sizeRatio: '9.4x',
-                orbitPeriod: '29 years',
-                moons: '146'
-            },
-            {
-                name: 'Uranus',
-                nameKo: '천왕성',
-                type: 'Ice Giant',
-                color: 0x7de3e3,
-                size: 14,
-                orbitRadius: 550,
-                orbitSpeed: 0.0004,
-                angle: Math.random() * Math.PI * 2,
-                description: 'The tilted ice giant',
-                temp: '-195°C',
-                sizeRatio: '4x',
-                orbitPeriod: '84 years',
-                moons: '28'
-            },
-            {
-                name: 'Neptune',
-                nameKo: '해왕성',
-                type: 'Ice Giant',
-                color: 0x4169e1,
-                size: 13,
-                orbitRadius: 650,
-                orbitSpeed: 0.0002,
-                angle: Math.random() * Math.PI * 2,
-                description: 'The windiest planet',
-                temp: '-200°C',
-                sizeRatio: '3.9x',
-                orbitPeriod: '165 years',
-                moons: '16'
-            }
-        ];
-
-        // 3D Objects storage
-        const planets = [];
-        const trails = [];
-        const orbitLines = [];
-        const nameLabels = [];
-
-        // Create starfield background
-        function createStarfield() {
-            const starsGeometry = new THREE.BufferGeometry();
-            const starsMaterial = new THREE.PointsMaterial({
-                color: 0xffffff,
-                size: 1.5,
-                sizeAttenuation: true
-            });
-
-            const starsVertices = [];
-            for (let i = 0; i < 5000; i++) {
-                const x = (Math.random() - 0.5) * 4000;
-                const y = (Math.random() - 0.5) * 4000;
-                const z = (Math.random() - 0.5) * 4000;
-                starsVertices.push(x, y, z);
-            }
-
-            starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
-            const starField = new THREE.Points(starsGeometry, starsMaterial);
-            scene.add(starField);
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
         }
 
-        // Create orbit line
-        function createOrbitLine(radius) {
-            const segments = 128;
-            const points = [];
-
-            for (let i = 0; i <= segments; i++) {
-                const angle = (i / segments) * Math.PI * 2;
-                points.push(new THREE.Vector3(
-                    Math.cos(angle) * radius,
-                    0,
-                    Math.sin(angle) * radius
-                ));
-            }
-
-            const geometry = new THREE.BufferGeometry().setFromPoints(points);
-            const material = new THREE.LineBasicMaterial({
-                color: 0xffffff,
-                transparent: true,
-                opacity: 0.15
-            });
-            const line = new THREE.Line(geometry, material);
-            scene.add(line);
-            orbitLines.push(line);
-            return line;
+        function updateHud() {
+            heroHpEl.style.width = `${(hero.hp / hero.maxHp) * 100}%`;
+            bossHpEl.style.width = `${(boss.hp / boss.maxHp) * 100}%`;
+            heroStatus.textContent = hero.shield ? '방패 대기 중: 다음 공격 감소' : '준비 완료';
+            bossStatus.textContent = boss.enraged ? '분노 상태: 피해 증가' : '고요한 분노';
+            document.getElementById('heal-btn').disabled = hero.healCharges <= 0 || actionLock;
         }
 
-        // Create planet
-        function createPlanet(data, index) {
-            const geometry = new THREE.SphereGeometry(data.size, 32, 32);
-            let material;
-
-            if (data.isSun) {
-                material = new THREE.MeshBasicMaterial({
-                    color: data.color,
-                    emissive: data.emissive
-                });
-
-                // Add glow effect for sun
-                const glowGeometry = new THREE.SphereGeometry(data.size * 1.3, 32, 32);
-                const glowMaterial = new THREE.MeshBasicMaterial({
-                    color: 0xffaa00,
-                    transparent: true,
-                    opacity: 0.3
-                });
-                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-                scene.add(glow);
-
-                // Add point light from sun
-                const sunLight = new THREE.PointLight(0xffffee, 2, 2000);
-                scene.add(sunLight);
-            } else {
-                material = new THREE.MeshStandardMaterial({
-                    color: data.color,
-                    roughness: 0.8,
-                    metalness: 0.2
-                });
-            }
-
-            const planet = new THREE.Mesh(geometry, material);
-            planet.userData = { ...data, index };
-            scene.add(planet);
-
-            // Saturn's ring
-            if (data.hasRing) {
-                const ringGeometry = new THREE.RingGeometry(data.size * 1.4, data.size * 2.2, 64);
-                const ringMaterial = new THREE.MeshBasicMaterial({
-                    color: 0xc4a868,
-                    transparent: true,
-                    opacity: 0.6,
-                    side: THREE.DoubleSide
-                });
-                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-                ring.rotation.x = Math.PI / 2.5;
-                planet.add(ring);
-            }
-
-            // Create trail
-            const trailPositions = [];
-            for (let i = 0; i < trailLength; i++) {
-                trailPositions.push(0, 0, 0);
-            }
-            const trailGeometry = new THREE.BufferGeometry();
-            trailGeometry.setAttribute('position', new THREE.Float32BufferAttribute(trailPositions, 3));
-
-            const trailMaterial = new THREE.LineBasicMaterial({
-                color: data.color,
-                transparent: true,
-                opacity: 0.7
-            });
-            const trail = new THREE.Line(trailGeometry, trailMaterial);
-            trail.userData = {
-                positions: [],
-                maxLength: trailLength,
-                color: data.color
-            };
-            scene.add(trail);
-            trails.push(trail);
-
-            planets.push(planet);
-
-            // Create orbit line
-            if (data.orbitRadius > 0) {
-                createOrbitLine(data.orbitRadius);
-            }
-
-            return planet;
+        function addLog(message, type = 'system') {
+            const p = document.createElement('p');
+            p.classList.add(type);
+            p.innerHTML = message;
+            logBox.appendChild(p);
+            logBox.scrollTop = logBox.scrollHeight;
         }
 
-        // Create text sprite for names
-        function createTextSprite(text, color) {
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = 256;
-            canvas.height = 64;
-
-            context.font = 'Bold 32px Courier New';
-            context.fillStyle = color;
-            context.textAlign = 'center';
-            context.fillText(text, 128, 40);
-
-            const texture = new THREE.CanvasTexture(canvas);
-            const spriteMaterial = new THREE.SpriteMaterial({
-                map: texture,
-                transparent: true,
-                opacity: 0.8
-            });
-            const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.scale.set(50, 15, 1);
-            scene.add(sprite);
-            nameLabels.push(sprite);
-            return sprite;
+        function animateOnce(element, className, duration = 300) {
+            element.classList.add(className);
+            setTimeout(() => element.classList.remove(className), duration);
         }
 
-        // Initialize scene
-        function initScene() {
-            // Ambient light
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-            scene.add(ambientLight);
+        function heroTakeDamage(amount) {
+            let finalDamage = amount;
+            if (hero.shield) {
+                finalDamage = Math.ceil(amount * 0.4);
+                addLog(`방패가 피해를 줄였습니다! (${amount} → ${finalDamage})`, 'system');
+                boss.hp = clamp(boss.hp - 6, 0, boss.maxHp);
+                animateOnce(bossSprite, 'hurt');
+                addLog('방패 반격으로 6 피해!', 'hero');
+            }
+            hero.hp = clamp(hero.hp - finalDamage, 0, hero.maxHp);
+            hero.shield = false;
+            animateOnce(heroSprite, 'hurt');
+            updateHud();
+        }
 
-            // Create starfield
-            createStarfield();
+        function bossTakeDamage(amount) {
+            let finalDamage = Math.max(amount - boss.sapArmor, 0);
+            boss.hp = clamp(boss.hp - finalDamage, 0, boss.maxHp);
+            animateOnce(bossSprite, 'hurt');
+            updateHud();
+            addLog(`${boss.name}에게 ${finalDamage} 피해!`, 'hero');
+        }
 
-            // Create planets
-            planetsData.forEach((data, index) => {
-                createPlanet(data, index);
-                if (data.orbitRadius > 0) {
-                    createTextSprite(data.name, '#' + data.color.toString(16).padStart(6, '0'));
+        function applyBurning(entity, amount) {
+            if (entity.burning > 0) {
+                entity.hp = clamp(entity.hp - amount, 0, entity.maxHp);
+            }
+        }
+
+        function checkVictory() {
+            if (boss.hp <= 0) {
+                addLog('승리! 거목을 쓰러뜨렸습니다.', 'system');
+                lockActions(true);
+                turnIndicator.textContent = '전투 종료';
+                return true;
+            }
+            if (hero.hp <= 0) {
+                addLog('패배... 숲이 당신을 삼켰습니다.', 'system');
+                lockActions(true);
+                turnIndicator.textContent = '전투 종료';
+                return true;
+            }
+            return false;
+        }
+
+        function random(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function lockActions(state) {
+            actionLock = state;
+            document.querySelectorAll('button.action').forEach(btn => btn.disabled = state);
+        }
+
+        function heroTurn(action) {
+            if (actionLock) return;
+            lockActions(true);
+            turnIndicator.textContent = '숲의 거목이 준비 중...';
+
+            switch (action) {
+                case 'slash': {
+                    const dmg = random(12, 18);
+                    addLog('기사의 일섬! 반짝이는 궤적이 거목을 벱니다.', 'hero');
+                    animateOnce(heroSprite, 'attack');
+                    setTimeout(() => bossTakeDamage(dmg), 200);
+                    break;
                 }
-            });
-
-            // Initial camera position
-            updateCameraPosition();
-        }
-
-        // Update camera position based on spherical coordinates
-        function updateCameraPosition() {
-            camera.position.x = cameraTarget.x + cameraDistance * Math.sin(cameraPhi) * Math.cos(cameraTheta);
-            camera.position.y = cameraTarget.y + cameraDistance * Math.cos(cameraPhi);
-            camera.position.z = cameraTarget.z + cameraDistance * Math.sin(cameraPhi) * Math.sin(cameraTheta);
-            camera.lookAt(cameraTarget);
-        }
-
-        // Update planet positions
-        function updatePlanets() {
-            planets.forEach((planet, index) => {
-                const data = planetsData[index];
-
-                if (!isPaused) {
-                    data.angle += data.orbitSpeed * speedMultiplier;
+                case 'guard': {
+                    hero.shield = true;
+                    addLog('방패를 높이 들고 숨을 고릅니다.', 'hero');
+                    break;
                 }
-
-                const x = Math.cos(data.angle) * data.orbitRadius;
-                const z = Math.sin(data.angle) * data.orbitRadius;
-
-                planet.position.set(x, 0, z);
-                planet.rotation.y += 0.01 * speedMultiplier;
-
-                // Update trail
-                if (data.orbitRadius > 0 && showTrails) {
-                    const trail = trails[index];
-                    const positions = trail.userData.positions;
-
-                    positions.unshift({ x, y: 0, z });
-                    if (positions.length > trail.userData.maxLength) {
-                        positions.pop();
+                case 'fire': {
+                    const dmg = random(24, 30);
+                    boss.burning = 2;
+                    addLog('불꽃병이 터지며 거목을 불태웁니다! 연소 2턴.', 'hero');
+                    animateOnce(heroSprite, 'attack');
+                    setTimeout(() => bossTakeDamage(dmg), 180);
+                    break;
+                }
+                case 'heal': {
+                    if (hero.healCharges <= 0) {
+                        addLog('더 이상 회복약이 없습니다.', 'system');
+                        lockActions(false);
+                        return;
                     }
-
-                    const posArray = [];
-                    positions.forEach(pos => {
-                        posArray.push(pos.x, pos.y, pos.z);
-                    });
-
-                    trail.geometry.setAttribute('position',
-                        new THREE.Float32BufferAttribute(posArray, 3));
-                    trail.geometry.attributes.position.needsUpdate = true;
+                    hero.healCharges -= 1;
+                    const heal = random(14, 20);
+                    hero.hp = clamp(hero.hp + heal, 0, hero.maxHp);
+                    addLog(`재정비 완료! 체력 ${heal} 회복. (남은 사용 ${hero.healCharges})`, 'hero');
+                    animateOnce(heroSprite, 'attack');
+                    updateHud();
+                    break;
                 }
+            }
 
-                // Update name label position
-                if (nameLabels[index - 1]) {
-                    nameLabels[index - 1].position.set(x, data.size + 15, z);
-                    nameLabels[index - 1].visible = showNames;
+            setTimeout(() => {
+                if (!checkVictory()) {
+                    bossTurn();
                 }
-            });
-
-            // Update orbit visibility
-            orbitLines.forEach(line => {
-                line.visible = showOrbits;
-            });
-
-            // Update trail visibility
-            trails.forEach(trail => {
-                trail.visible = showTrails;
-            });
+            }, 500);
         }
 
-        // Handle window resize
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
+        function bossTurn() {
+            turnIndicator.textContent = '거목의 턴';
 
-        // Mouse events for camera rotation
-        function onMouseDown(event) {
-            if (event.button === 0) { // Left click
-                isDragging = true;
-            } else if (event.button === 2) { // Right click
-                isPanning = true;
-            }
-            previousMousePosition = { x: event.clientX, y: event.clientY };
-        }
-
-        function onMouseMove(event) {
-            if (isDragging) {
-                const deltaX = event.clientX - previousMousePosition.x;
-                const deltaY = event.clientY - previousMousePosition.y;
-
-                cameraTheta -= deltaX * 0.01;
-                cameraPhi -= deltaY * 0.01;
-
-                // Clamp phi to prevent flipping
-                cameraPhi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraPhi));
-
-                updateCameraPosition();
-            } else if (isPanning) {
-                const deltaX = event.clientX - previousMousePosition.x;
-                const deltaY = event.clientY - previousMousePosition.y;
-
-                const right = new THREE.Vector3();
-                const up = new THREE.Vector3(0, 1, 0);
-                camera.getWorldDirection(right);
-                right.cross(up).normalize();
-
-                cameraTarget.addScaledVector(right, -deltaX * 0.5);
-                cameraTarget.y += deltaY * 0.5;
-
-                updateCameraPosition();
+            // Burning damage on boss turn start
+            if (boss.burning > 0) {
+                boss.hp = clamp(boss.hp - 5, 0, boss.maxHp);
+                addLog('연소 피해로 5를 잃습니다.', 'boss');
+                boss.burning -= 1;
             }
 
-            previousMousePosition = { x: event.clientX, y: event.clientY };
-        }
-
-        function onMouseUp(event) {
-            // Check for planet click
-            if (!isDragging || (Math.abs(event.clientX - previousMousePosition.x) < 5 &&
-                Math.abs(event.clientY - previousMousePosition.y) < 5)) {
-                checkPlanetClick(event);
+            if (boss.hp < boss.maxHp / 2 && !boss.enraged) {
+                boss.enraged = true;
+                addLog('거목이 분노합니다! 모든 공격이 강화됩니다.', 'boss');
             }
-            isDragging = false;
-            isPanning = false;
-        }
 
-        function onWheel(event) {
-            event.preventDefault();
-            cameraDistance += event.deltaY * 0.5;
-            cameraDistance = Math.max(100, Math.min(2000, cameraDistance));
-            updateCameraPosition();
-        }
-
-        // Raycaster for planet selection
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        function checkPlanetClick(event) {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(planets);
-
-            if (intersects.length > 0) {
-                const planet = intersects[0].object;
-                selectedPlanet = planet.userData;
-                updateInfoPanel(planet.userData);
+            const choice = Math.random();
+            if (choice < 0.4) {
+                const dmg = random(14, 22) + (boss.enraged ? 4 : 0);
+                addLog('뿌리로 땅을 쳐 올립니다! (루트 슬램)', 'boss');
+                animateOnce(bossSprite, 'attack');
+                setTimeout(() => heroTakeDamage(dmg), 220);
+            } else if (choice < 0.75) {
+                const hits = 2;
+                addLog('덩굴이 연속으로 휘둘러집니다! (Vine Whip)', 'boss');
+                animateOnce(bossSprite, 'attack');
+                for (let i = 0; i < hits; i++) {
+                    const dmg = random(7, 11) + (boss.enraged ? 2 : 0);
+                    setTimeout(() => heroTakeDamage(dmg), 200 + i * 180);
+                }
             } else {
-                selectedPlanet = null;
-                document.getElementById('info-panel').style.display = 'none';
-            }
-        }
-
-        // Update info panel
-        function updateInfoPanel(data) {
-            document.getElementById('info-panel').style.display = 'block';
-            document.getElementById('planet-name').textContent = `${data.name} (${data.nameKo})`;
-            document.getElementById('planet-type').textContent = data.type;
-            document.getElementById('planet-color-box').style.backgroundColor = '#' + data.color.toString(16).padStart(6, '0');
-            document.getElementById('planet-desc').textContent = data.description;
-            document.getElementById('planet-temp').textContent = data.temp;
-            document.getElementById('planet-size').textContent = data.sizeRatio;
-            document.getElementById('planet-orbit').textContent = data.orbitPeriod;
-            document.getElementById('planet-moons').textContent = data.moons;
-        }
-
-        // FPS counter
-        let lastTime = performance.now();
-        let frameCount = 0;
-
-        // Animation loop
-        function animate() {
-            requestAnimationFrame(animate);
-
-            if (!isPaused) {
-                time += speedMultiplier;
+                boss.sapArmor = 3;
+                addLog('수액 갑옷으로 몸을 감쌉니다. (다음 피해 3 감소)', 'boss');
+                setTimeout(() => addLog('울부짖음이 숲을 울립니다. 사기가 흔들립니다.', 'boss'), 120);
             }
 
-            updatePlanets();
-            renderer.render(scene, camera);
-
-            // FPS calculation
-            frameCount++;
-            const currentTime = performance.now();
-            if (currentTime - lastTime >= 1000) {
-                document.getElementById('fps-val').textContent = frameCount;
-                frameCount = 0;
-                lastTime = currentTime;
-            }
+            setTimeout(() => {
+                boss.sapArmor = Math.max(boss.sapArmor - 1, 0);
+                if (boss.enraged) {
+                    addLog('분노한 나무 껍질이 금이 갑니다. (방어 -1)', 'system');
+                }
+                updateHud();
+                if (!checkVictory()) {
+                    turnIndicator.textContent = '기사의 턴';
+                    lockActions(false);
+                }
+            }, 1200);
         }
 
-        // Event listeners
-        window.addEventListener('resize', onWindowResize);
-        renderer.domElement.addEventListener('mousedown', onMouseDown);
-        renderer.domElement.addEventListener('mousemove', onMouseMove);
-        renderer.domElement.addEventListener('mouseup', onMouseUp);
-        renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
-        renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.getElementById('slash-btn').addEventListener('click', () => heroTurn('slash'));
+        document.getElementById('guard-btn').addEventListener('click', () => heroTurn('guard'));
+        document.getElementById('fire-btn').addEventListener('click', () => heroTurn('fire'));
+        document.getElementById('heal-btn').addEventListener('click', () => heroTurn('heal'));
 
-        // Control panel events
-        document.getElementById('speed').addEventListener('input', (e) => {
-            speedMultiplier = parseFloat(e.target.value);
-            document.getElementById('speed-val').textContent = speedMultiplier.toFixed(1) + 'x';
-        });
-
-        document.getElementById('trail-length').addEventListener('input', (e) => {
-            trailLength = parseInt(e.target.value);
-            document.getElementById('trail-val').textContent = trailLength;
-            trails.forEach(trail => {
-                trail.userData.maxLength = trailLength;
-            });
-        });
-
-        document.getElementById('toggle-trails').addEventListener('click', (e) => {
-            showTrails = !showTrails;
-            e.target.textContent = showTrails ? 'Trails ON' : 'Trails OFF';
-            e.target.classList.toggle('active', showTrails);
-        });
-
-        document.getElementById('toggle-orbits').addEventListener('click', (e) => {
-            showOrbits = !showOrbits;
-            e.target.textContent = showOrbits ? 'Orbits ON' : 'Orbits OFF';
-            e.target.classList.toggle('active', showOrbits);
-        });
-
-        document.getElementById('toggle-names').addEventListener('click', (e) => {
-            showNames = !showNames;
-            e.target.textContent = showNames ? 'Names ON' : 'Names OFF';
-            e.target.classList.toggle('active', showNames);
-        });
-
-        document.getElementById('toggle-pause').addEventListener('click', (e) => {
-            isPaused = !isPaused;
-            e.target.textContent = isPaused ? 'Play' : 'Pause';
-            e.target.classList.toggle('active', isPaused);
-        });
-
-        // View buttons
-        document.getElementById('view-top').addEventListener('click', () => {
-            cameraPhi = 0.1;
-            cameraTheta = 0;
-            updateCameraPosition();
-        });
-
-        document.getElementById('view-side').addEventListener('click', () => {
-            cameraPhi = Math.PI / 2;
-            cameraTheta = 0;
-            updateCameraPosition();
-        });
-
-        document.getElementById('view-angle').addEventListener('click', () => {
-            cameraPhi = Math.PI / 4;
-            cameraTheta = Math.PI / 4;
-            updateCameraPosition();
-        });
-
-        document.getElementById('view-reset').addEventListener('click', () => {
-            cameraDistance = 800;
-            cameraPhi = Math.PI / 4;
-            cameraTheta = Math.PI / 4;
-            cameraTarget.set(0, 0, 0);
-            updateCameraPosition();
-        });
-
-        // Keyboard events
         document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                isPaused = !isPaused;
-                const btn = document.getElementById('toggle-pause');
-                btn.textContent = isPaused ? 'Play' : 'Pause';
-                btn.classList.toggle('active', isPaused);
-            } else if (e.code === 'KeyR') {
-                cameraDistance = 800;
-                cameraPhi = Math.PI / 4;
-                cameraTheta = Math.PI / 4;
-                cameraTarget.set(0, 0, 0);
-                updateCameraPosition();
+            const keyMap = {
+                q: 'slash',
+                w: 'guard',
+                e: 'fire',
+                r: 'heal',
+            };
+            const action = keyMap[e.key.toLowerCase()];
+            if (action) {
+                heroTurn(action);
             }
         });
 
-        // Initialize and start
-        initScene();
-        animate();
+        // Initial state
+        addLog('숲의 거목이 눈을 뜨고 당신을 바라봅니다.', 'system');
+        updateHud();
+        lockActions(false);
     </script>
 </body>
 </html>
